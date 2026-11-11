@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1220">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Трикутник вітрів">
+<title>Трикутник вітрів — калькулятор</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<style>
+  :root{
+    --bg:#0b1220; --card:#141d2e; --card2:#1b2740; --line:#26334d;
+    --txt:#e8eefc; --muted:#8b9bb4; --accent:#38bdf8; --green:#34d399;
+    --amber:#fbbf24; --red:#f87171; --purple:#c084fc;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:radial-gradient(1200px 600px at 50% -10%, #16233c 0%, var(--bg) 60%);
+    color:var(--txt);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    min-height:100vh;
+    padding:
+      calc(16px + env(safe-area-inset-top, 0px))
+      16px
+      calc(16px + env(safe-area-inset-bottom, 0px));
+    -webkit-font-smoothing:antialiased;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .wrap{max-width:760px;margin:0 auto}
+  header{margin:4px 0 18px;text-align:center}
+  header h1{font-size:20px;font-weight:650;letter-spacing:.2px;margin:0 0 4px}
+  header p{margin:0;color:var(--muted);font-size:13px}
+
+  .panel{
+    background:linear-gradient(180deg,var(--card) 0%, #111a29 100%);
+    border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px;
+  }
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .field{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .field label{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.3px;line-height:1.25}
+  .field label .range{color:#5f7089;font-weight:500;font-size:11px}
+
+  .input-wrap{position:relative;display:flex;min-width:0}
+  .input-wrap input{padding-right:64px}
+  .tc-effective{
+    position:absolute;right:12px;top:50%;transform:translateY(-50%);
+    font-size:13px;color:var(--accent);font-weight:700;
+    font-variant-numeric:tabular-nums;pointer-events:none;
+    letter-spacing:.2px;white-space:nowrap;
+  }
+  .tc-effective[hidden]{display:none}
+
+  .field input{
+    width:100%;background:var(--card2);border:1px solid var(--line);
+    border-radius:11px;color:var(--txt);font-size:22px;font-weight:650;
+    padding:11px 12px;font-variant-numeric:tabular-nums;outline:none;
+    touch-action:manipulation;transition:border-color .15s, box-shadow .15s;
+    -webkit-appearance:none;appearance:none;
+  }
+  .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(56,189,248,.15)}
+
+  .seg{
+    display:flex;gap:3px;background:var(--card2);border:1px solid var(--line);
+    border-radius:9px;padding:3px;margin-top:2px;
+  }
+  .seg button{
+    flex:1;min-width:0;appearance:none;border:0;background:transparent;
+    color:var(--muted);font:inherit;font-size:12px;font-weight:700;
+    padding:6px 4px;border-radius:7px;cursor:pointer;
+    transition:background .15s,color .15s;white-space:nowrap;touch-action:manipulation;
+  }
+  .seg button.on{background:rgba(56,189,248,.18);color:#bfe9ff}
+  .seg button:active{transform:translateY(1px)}
+
+  .reverse-row{
+    display:flex;align-items:center;gap:12px;margin-top:12px;padding-top:12px;
+    border-top:1px dashed var(--line);
+  }
+  .reverse-label{font-size:13px;color:var(--txt);font-weight:600;flex:1}
+  .toggle{position:relative;flex-shrink:0;width:48px;height:28px;display:inline-block}
+  .toggle input{opacity:0;width:0;height:0;position:absolute}
+  .toggle-track{
+    position:absolute;inset:0;background:var(--card2);border:1px solid var(--line);
+    border-radius:28px;cursor:pointer;transition:background .2s, border-color .2s;
+  }
+  .toggle-track::before{
+    content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;
+    background:var(--muted);border-radius:50%;transition:transform .2s, background .2s;
+  }
+  .toggle input:checked + .toggle-track{background:rgba(56,189,248,.20);border-color:var(--accent)}
+  .toggle input:checked + .toggle-track::before{transform:translateX(20px);background:var(--accent)}
+
+  .var-field{
+    display:flex;flex-direction:column;gap:6px;margin-top:12px;padding-top:12px;
+    border-top:1px dashed var(--line);
+  }
+  .var-field > label{font-size:12px;color:var(--muted);font-weight:600;line-height:1.25;letter-spacing:.3px}
+  .var-field > label .range{color:#5f7089;font-weight:500;font-size:11px}
+
+  .var-stepper{display:flex;gap:6px;align-items:stretch}
+  .var-stepper input{
+    flex:1;min-width:0;background:var(--card2);border:1px solid var(--line);
+    border-radius:11px;color:var(--txt);font-size:22px;font-weight:650;
+    padding:11px 12px;text-align:center;font-variant-numeric:tabular-nums;
+    outline:none;touch-action:manipulation;-webkit-appearance:none;appearance:none;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .var-stepper input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(56,189,248,.15)}
+
+  .step-btn{
+    flex-shrink:0;width:58px;min-height:48px;background:var(--card2);
+    border:1px solid var(--line);border-radius:11px;color:var(--txt);
+    font:inherit;font-size:13px;font-weight:700;letter-spacing:-.2px;line-height:1;
+    cursor:pointer;touch-action:manipulation;
+    user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
+    transition:background .12s, border-color .12s, transform .08s;
+    display:flex;align-items:center;justify-content:center;padding:0;
+  }
+  .step-btn:hover{background:rgba(56,189,248,.10);border-color:var(--accent)}
+  .step-btn:active,.step-btn.pressed{
+    background:rgba(56,189,248,.22);border-color:var(--accent);transform:scale(0.96);
+  }
+
+  .reset-row{
+    margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);
+    display:flex;justify-content:center;
+  }
+  .reset-btn{
+    background:transparent;border:1px solid var(--line);color:var(--muted);
+    font:inherit;font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:9px;
+    cursor:pointer;transition:color .15s,border-color .15s;touch-action:manipulation;
+  }
+  .reset-btn:hover{color:var(--txt);border-color:var(--accent)}
+  .reset-btn:active{transform:translateY(1px)}
+
+  .results{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .res{
+    background:linear-gradient(180deg,#16233a,#111a29);border:1px solid var(--line);
+    border-radius:14px;padding:13px 14px;min-width:0;
+  }
+  .res .k{
+    font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);
+    font-weight:700;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .res .v{
+    font-size:32px;font-weight:750;line-height:1.05;
+    font-variant-numeric:tabular-nums;letter-spacing:-.5px;
+  }
+  .res .v small{font-size:15px;font-weight:600;color:var(--muted);margin-left:3px}
+  .res.hi .v{color:var(--green)}
+  .res.th .v{color:var(--red)}
+  .res.wca .v{color:var(--amber)}
+  .res.mh .v{color:var(--purple)}
+  .res .sub{font-size:12px;color:var(--muted);margin-top:5px;font-weight:600}
+
+  .components{
+    margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);
+    display:flex;flex-direction:column;gap:7px;
+  }
+  .comp-row{
+    display:flex;justify-content:space-between;align-items:baseline;
+    gap:10px;font-size:13px;line-height:1.3;
+  }
+  .comp-k{color:var(--muted);font-weight:600}
+  .comp-v{color:var(--txt);font-weight:650;font-variant-numeric:tabular-nums;text-align:right}
+
+  .time-calc{
+    margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  }
+  .time-result{
+    background:linear-gradient(180deg,#16233a,#111a29);border:1px solid var(--line);
+    border-radius:14px;padding:13px 14px;min-width:0;
+  }
+  .time-result .k{
+    font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);
+    font-weight:700;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .time-result .v{
+    font-size:26px;font-weight:750;line-height:1.05;
+    font-variant-numeric:tabular-nums;letter-spacing:-.5px;color:var(--accent);
+  }
+  .time-result .sub{
+    font-size:12px;color:var(--muted);margin-top:4px;font-weight:600;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .warn{
+    display:none;margin-top:12px;background:rgba(248,113,113,.1);
+    border:1px solid rgba(248,113,113,.4);color:#fecaca;border-radius:11px;
+    padding:11px 13px;font-size:13px;font-weight:600;line-height:1.4;
+  }
+  .warn.show{display:block}
+
+  .compass-wrap{display:flex;justify-content:center;padding:6px 0 2px}
+  svg.compass{width:100%;max-width:270px;height:auto;touch-action:none}
+  .legend{
+    display:flex;justify-content:center;gap:16px;flex-wrap:wrap;
+    font-size:12px;color:var(--muted);font-weight:600;margin-top:4px;
+  }
+  .legend i{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  .legend i.dash{background:repeating-linear-gradient(90deg,currentColor 0 5px,transparent 5px 8px)}
+
+  footer{
+    text-align:center;color:var(--muted);font-size:11.5px;
+    line-height:1.6;margin-top:6px;padding:0 10px;
+  }
+
+  @media (max-width:420px){
+    .res .v{font-size:27px}
+    .field input{font-size:20px;padding:10px}
+    .input-wrap input{padding-right:60px}
+    .tc-effective{font-size:12px;right:10px}
+    .var-stepper input{font-size:20px;padding:10px}
+    .step-btn{width:52px;min-height:44px;font-size:12px}
+    .time-result .v{font-size:22px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Трикутник вітрів</h1>
+    <p>Хідінг, шляхова швидкість, час польоту</p>
+  </header>
+
+  <section class="panel">
+    <div class="grid">
+      <div class="field">
+        <label for="tc">Шляховий кут (TC) <span class="range">0–360°</span></label>
+        <div class="input-wrap">
+          <input id="tc" type="text" inputmode="decimal" enterkeyhint="done" value="0" placeholder="0">
+          <span class="tc-effective" id="tcEffective" hidden>«000°»</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="tas">Приладова швидк. (TAS) <span class="range">0–999</span></label>
+        <input id="tas" type="text" inputmode="decimal" enterkeyhint="done" value="50" placeholder="50">
+        <div class="seg" id="tasUnit" role="group" aria-label="Одиниці швидкості TAS">
+          <button type="button" data-u="ms" class="on">м/с</button>
+          <button type="button" data-u="kmh">км/г</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="wd">Вітер ЗВІДКИ <span class="range">0–360°</span></label>
+        <input id="wd" type="text" inputmode="decimal" enterkeyhint="done" value="270" placeholder="270">
+      </div>
+
+      <div class="field">
+        <label for="ws">Швидкість вітру (м/с) <span class="range">0–999</span></label>
+        <input id="ws" type="text" inputmode="decimal" enterkeyhint="done" value="10" placeholder="10">
+      </div>
+    </div>
+
+    <div class="reverse-row">
+      <span class="reverse-label">Зворотний курс (+180°)</span>
+      <label class="toggle" for="reverse">
+        <input type="checkbox" id="reverse">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="var-field">
+      <label for="var">Магнітне схилення <span class="range">−180…+180° · крок 0.5°</span></label>
+      <div class="var-stepper">
+        <button type="button" class="step-btn" id="varMinus" aria-label="Зменшити на 0.5 градуса">−0.5</button>
+        <input id="var" type="text" inputmode="decimal" enterkeyhint="done" value="0" placeholder="0">
+        <button type="button" class="step-btn" id="varPlus" aria-label="Збільшити на 0.5 градуса">+0.5</button>
+      </div>
+    </div>
+
+    <div class="reset-row">
+      <button id="reset" type="button" class="reset-btn">↺ Скинути до стандартних</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="results">
+      <div class="res th">
+        <div class="k">Істинний хідінг</div>
+        <div class="v" id="out-th">000°</div>
+        <div class="sub" id="out-th-sub">TH</div>
+      </div>
+      <div class="res hi">
+        <div class="k">Шляхова швидк.</div>
+        <div class="v" id="out-gs">—</div>
+        <div class="sub" id="out-gs-sub">GS</div>
+      </div>
+      <div class="res wca">
+        <div class="k">Кут поправки (WCA)</div>
+        <div class="v" id="out-wca">0°</div>
+        <div class="sub" id="out-wca-sub">—</div>
+      </div>
+      <div class="res mh">
+        <div class="k">Магнітний хідінг</div>
+        <div class="v" id="out-mh">000°</div>
+        <div class="sub">MH</div>
+      </div>
+    </div>
+
+    <div class="components">
+      <div class="comp-row">
+        <span class="comp-k">Поздовжня складова вітру</span>
+        <span class="comp-v" id="out-long">—</span>
+      </div>
+      <div class="comp-row">
+        <span class="comp-k">Бічна складова вітру</span>
+        <span class="comp-v" id="out-cross">—</span>
+      </div>
+    </div>
+
+    <div class="time-calc">
+      <div class="field">
+        <label for="dist">Дистанція (км) <span class="range">0–9000</span></label>
+        <input id="dist" type="text" inputmode="decimal" enterkeyhint="done" value="" placeholder="0">
+      </div>
+      <div class="time-result">
+        <div class="k">Час польоту</div>
+        <div class="v" id="out-time">—</div>
+        <div class="sub" id="out-time-sub"></div>
+      </div>
+    </div>
+
+    <div class="warn" id="warn"></div>
+
+    <div class="compass-wrap">
+      <svg class="compass" viewBox="0 0 220 220" aria-hidden="true">
+        <defs>
+          <marker id="arrowWind" viewBox="0 0 10 10" refX="9" refY="5"
+                  markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#8b9bb4"/>
+          </marker>
+          <marker id="arrowTH" viewBox="0 0 10 10" refX="9.5" refY="5"
+                  markerWidth="14" markerHeight="14"
+                  markerUnits="userSpaceOnUse" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#f87171"/>
+          </marker>
+        </defs>
+        <circle cx="110" cy="110" r="84" fill="none" stroke="#26334d" stroke-width="1.5"/>
+        <circle cx="110" cy="110" r="68" fill="none" stroke="#26334d" stroke-width="1"/>
+        <g id="ticks" stroke="#33435f" stroke-linecap="round"></g>
+        <text x="110" y="21" text-anchor="middle" fill="#8b9bb4" font-size="11" font-weight="700">Пн</text>
+        <text x="200" y="114" text-anchor="middle" fill="#8b9bb4" font-size="11" font-weight="700">Сх</text>
+        <text x="110" y="209" text-anchor="middle" fill="#8b9bb4" font-size="11" font-weight="700">Пд</text>
+        <text x="20" y="114" text-anchor="middle" fill="#8b9bb4" font-size="11" font-weight="700">Зх</text>
+        <line id="svg-wind" x1="110" y1="110" x2="110" y2="110"
+              stroke="#8b9bb4" stroke-width="1.6" stroke-dasharray="5 5"
+              marker-end="url(#arrowWind)"/>
+        <line id="svg-tc" x1="110" y1="110" x2="110" y2="26"
+              stroke="#38bdf8" stroke-width="3" stroke-linecap="round"
+              stroke-dasharray="7 6"/>
+        <line id="svg-th" x1="110" y1="110" x2="110" y2="34"
+              stroke="#f87171" stroke-width="3" stroke-linecap="butt"
+              stroke-dasharray="7 5" marker-end="url(#arrowTH)"/>
+        <circle cx="110" cy="110" r="4" fill="#e8eefc"/>
+      </svg>
+    </div>
+    <div class="legend">
+      <span style="color:#38bdf8"><i class="dash"></i><span style="color:var(--muted)">TC</span></span>
+      <span style="color:#f87171"><i class="dash"></i><span style="color:var(--muted)">TH</span></span>
+      <span style="color:#8b9bb4"><i class="dash"></i><span style="color:var(--muted)">вітер</span></span>
+    </div>
+  </section>
+
+  <footer>
+    Вітер вказується як напрямок <b>ЗВІДКИ</b> він дме (метеорологічний), швидкість — у <b>м/с</b>.<br>
+    Швидкість ПС — у <b>м/с</b> або <b>км/г</b> (перемикач). Час = дистанція ÷ GS.
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const el = (id) => document.getElementById(id);
+  const F = { tc:el('tc'), tas:el('tas'), wd:el('wd'), ws:el('ws'), vr:el('var'), dist:el('dist') };
+  const O = {
+    th:el('out-th'), thSub:el('out-th-sub'), gs:el('out-gs'), gsSub:el('out-gs-sub'),
+    wca:el('out-wca'), wcaSub:el('out-wca-sub'), mh:el('out-mh'),
+    long:el('out-long'), cross:el('out-cross'), time:el('out-time'), timeSub:el('out-time-sub'),
+    warn:el('warn'), tcEffective:el('tcEffective')
+  };
+  const SVG = { tc:el('svg-tc'), th:el('svg-th'), wind:el('svg-wind') };
+
+  const CX = 110, CY = 110, R = 84;
+  const KMH_PER_MS = 3.6;
+  const STORAGE_KEY = 'windcalc-v1';
+  const DIST_MAX = 9000;
+  const DEFAULTS = { tc:0, tas:50, wd:270, ws:10, vr:0, dist:'', unit:'ms', reverse:false };
+  const VR_STEP = 0.5;
+  const state = { unit: 'ms', reverse: false };
+
+  const mod360 = (x) => ((x % 360) + 360) % 360;
+  const rad = (d) => d * Math.PI / 180;
+  const toMs   = (v, u) => (u === 'kmh' ? v / KMH_PER_MS : v);
+  const fromMs = (v, u) => (u === 'kmh' ? v * KMH_PER_MS : v);
+  const unitLabel = (u) => (u === 'kmh' ? 'км/г' : 'м/с');
+
+  function fmtSpeed(v, u) {
+    if (u === 'kmh') return String(Math.round(v));
+    return v.toFixed(1);
+  }
+  function polar(r, deg) {
+    const a = rad(deg);
+    return [CX + r * Math.sin(a), CY - r * Math.cos(a)];
+  }
+  function fmtDeg(v) {
+    const d = Math.round(mod360(v)) % 360;
+    return String(d).padStart(3, '0') + '°';
+  }
+  function fmtVr(v) {
+    const r = Math.round(v * 10) / 10;
+    return Number.isInteger(r) ? String(r) : r.toFixed(1);
+  }
+  function setLine(node, deg, len) {
+    const [x, y] = polar(len, deg);
+    node.setAttribute('x2', x.toFixed(2));
+    node.setAttribute('y2', y.toFixed(2));
+  }
+
+  (function buildTicks() {
+    const g = el('ticks');
+    let out = '';
+    for (let d = 0; d < 360; d += 10) {
+      const isCardinal = d % 90 === 0;
+      const isMajor    = d % 30 === 0;
+      const r1 = isCardinal ? 66 : (isMajor ? 74 : 78);
+      const w  = isCardinal ? 2  : (isMajor ? 1.5 : 1);
+      const [x1, y1] = polar(r1, d);
+      const [x2, y2] = polar(R, d);
+      out += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke-width="${w}"/>`;
+      if (isMajor && !isCardinal) {
+        const [tx, ty] = polar(61, d);
+        out += `<text x="${tx.toFixed(1)}" y="${(ty + 3).toFixed(1)}" text-anchor="middle" fill="#5f7089" font-size="8.5" font-weight="600" stroke="none">${d}</text>`;
+      }
+    }
+    g.innerHTML = out;
+  })();
+
+  function num(input) {
+    if (!input.value) return NaN;
+    const v = parseFloat(input.value.replace(',', '.'));
+    return isFinite(v) ? v : NaN;
+  }
+  function warn(msg) {
+    if (msg) { O.warn.textContent = msg; O.warn.classList.add('show'); }
+    else     { O.warn.classList.remove('show'); }
+  }
+  function blank() {
+    O.th.textContent = '—'; O.gs.innerHTML = '—'; O.gsSub.textContent = 'GS';
+    O.wca.textContent = '—'; O.mh.textContent = '—'; O.wcaSub.textContent = '—';
+    O.thSub.textContent = 'TH'; O.long.textContent = '—'; O.cross.textContent = '—';
+    O.time.textContent = '—'; O.timeSub.textContent = '';
+    [SVG.tc, SVG.th, SVG.wind].forEach((n) => {
+      n.setAttribute('x2', CX); n.setAttribute('y2', CY);
+    });
+  }
+
+  function filterNumeric(inp, allowNeg) {
+    const v = inp.value;
+    if (v === '') return;
+    let s = v.replace(allowNeg ? /[^0-9.,-]/g : /[^0-9.,]/g, '');
+    const sepIdx = s.search(/[.,]/);
+    if (sepIdx !== -1) {
+      s = s.slice(0, sepIdx + 1) + s.slice(sepIdx + 1).replace(/[.,]/g, '');
+    }
+    if (allowNeg) {
+      if (s.startsWith('-')) s = '-' + s.slice(1).replace(/-/g, '');
+      else s = s.replace(/-/g, '');
+    }
+    if (s !== v) inp.value = s;
+  }
+  function clampField(inp, min, max) {
+    const v = inp.value;
+    if (v === '' || v === '-' || v === '.' || v === ',' || v === '-.' || v === '-,') return;
+    const n = parseFloat(v.replace(',', '.'));
+    if (!isFinite(n)) return;
+    if (n > max) inp.value = String(max);
+    else if (n < min) inp.value = String(min);
+  }
+  function attachClamp(inp, min, max, allowNeg) {
+    inp.addEventListener('input', () => {
+      filterNumeric(inp, !!allowNeg);
+      clampField(inp, min, max);
+    });
+  }
+  function sanitizeAll() {
+    clampField(F.tc, 0, 360); clampField(F.wd, 0, 360); clampField(F.vr, -180, 180);
+    clampField(F.tas, 0, 999); clampField(F.ws, 0, 999); clampField(F.dist, 0, DIST_MAX);
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        tc:F.tc.value, tas:F.tas.value, wd:F.wd.value, ws:F.ws.value,
+        vr:F.vr.value, dist:F.dist.value, unit:state.unit, reverse:state.reverse
+      }));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      if (!s) return;
+      if (s.tc   != null) F.tc.value   = s.tc;
+      if (s.tas  != null) F.tas.value  = s.tas;
+      if (s.wd   != null) F.wd.value   = s.wd;
+      if (s.ws   != null) F.ws.value   = s.ws;
+      if (s.vr   != null) F.vr.value   = s.vr;
+      if (s.dist != null) F.dist.value = s.dist;
+      if (s.unit === 'kmh' || s.unit === 'ms') state.unit = s.unit;
+      if (typeof s.reverse === 'boolean') state.reverse = s.reverse;
+    } catch (e) {}
+  }
+
+  function refreshTcBadge() {
+    if (!state.reverse) { O.tcEffective.hidden = true; return; }
+    const tc = num(F.tc);
+    if (!isFinite(tc)) { O.tcEffective.hidden = true; return; }
+    O.tcEffective.hidden = false;
+    O.tcEffective.textContent = '«' + fmtDeg(mod360(tc + 180)) + '»';
+  }
+
+  function update() {
+    try { calc(); } finally { saveState(); refreshTcBadge(); }
+  }
+
+  function fmtDuration(totalMinutes) {
+    const t = Math.max(0, Math.round(totalMinutes));
+    const h = Math.floor(t / 60);
+    const m = t % 60;
+    if (h === 0) return m + ' хв';
+    if (m === 0) return h + ' г';
+    return h + ' г ' + m + ' хв';
+  }
+
+  function calc() {
+    const tcRaw  = num(F.tc);
+    const tasRaw = num(F.tas);
+    const wd     = num(F.wd);
+    const ws     = num(F.ws);
+    let   vr     = num(F.vr);
+    if (!isFinite(vr)) vr = 0;
+
+    const tc = state.reverse ? mod360((isFinite(tcRaw) ? tcRaw : 0) + 180) : tcRaw;
+    const tas = toMs(tasRaw, state.unit);
+
+    if (!isFinite(tc) || !isFinite(tasRaw) || !isFinite(wd) || !isFinite(ws) || !(tas > 0)) {
+      blank();
+      warn(isFinite(tasRaw) && tasRaw <= 0 ? 'Швидкість TAS повинна бути більшою за нуль.' : '');
+      updateTime(NaN);
+      return;
+    }
+    warn('');
+
+    const awa   = rad(wd - tc);
+    const ratio = (ws / tas) * Math.sin(awa);
+
+    if (Math.abs(ratio) > 1) {
+      blank();
+      warn('Вітер занадто сильний: поперечна складова перевищує TAS. Утримати заданий шлях неможливо — змініть курс або зачекайте.');
+      updateTime(NaN);
+      return;
+    }
+
+    const wca  = Math.asin(ratio) * 180 / Math.PI;
+    const gsMs = tas * Math.cos(rad(wca)) - ws * Math.cos(awa);
+    const th   = mod360(tc + wca);
+    const mh   = mod360(th - vr);
+    const longComp  = ws * Math.cos(awa);
+    const crossComp = ws * Math.sin(awa);
+
+    O.th.textContent    = fmtDeg(th);
+    O.thSub.textContent = 'TH = ' + fmtDeg(tc) + ' ' +
+                          (wca >= 0 ? '+' : '−') + Math.abs(wca).toFixed(1) + '°' +
+                          (state.reverse ? '  ↺' : '');
+    O.mh.textContent    = fmtDeg(mh);
+
+    const gsOut   = fromMs(gsMs, state.unit);
+    const other   = state.unit === 'ms' ? 'kmh' : 'ms';
+    const gsOther = fromMs(gsMs, other);
+    O.gs.innerHTML      = fmtSpeed(gsOut, state.unit) + '<small>' + unitLabel(state.unit) + '</small>';
+    O.gsSub.textContent = '= ' + fmtSpeed(gsOther, other) + ' ' + unitLabel(other);
+
+    O.wca.textContent = (wca >= 0 ? '+' : '−') + Math.abs(wca).toFixed(1) + '°';
+    O.wcaSub.textContent = Math.abs(wca) < 0.5 ? 'прямо по шляху' : (wca > 0 ? 'вправо' : 'вліво');
+
+    const uLbl = ' ' + unitLabel(state.unit);
+    const fL = (v) => fmtSpeed(v, state.unit);
+
+    if (Math.abs(fromMs(longComp, state.unit)) < 0.1) O.long.textContent = 'немає';
+    else if (longComp > 0) O.long.textContent = 'зустрічна ' + fL(fromMs(longComp, state.unit)) + uLbl;
+    else O.long.textContent = 'попутна '  + fL(fromMs(-longComp, state.unit)) + uLbl;
+
+    if (Math.abs(fromMs(crossComp, state.unit)) < 0.1) O.cross.textContent = 'немає';
+    else if (crossComp > 0) O.cross.textContent = 'справа ' + fL(fromMs(crossComp, state.unit)) + uLbl;
+    else O.cross.textContent = 'зліва '  + fL(fromMs(-crossComp, state.unit)) + uLbl;
+
+    updateTime(gsMs);
+    setLine(SVG.tc, tc, R - 8);
+    setLine(SVG.th, th, R - 22);
+
+    const [wx, wy]   = polar(R - 4, wd);
+    const [wx2, wy2] = polar(24, wd);
+    SVG.wind.setAttribute('x1', wx.toFixed(2));
+    SVG.wind.setAttribute('y1', wy.toFixed(2));
+    SVG.wind.setAttribute('x2', wx2.toFixed(2));
+    SVG.wind.setAttribute('y2', wy2.toFixed(2));
+  }
+
+  function updateTime(gsMs) {
+    const dist = num(F.dist);
+    if (!isFinite(dist) || dist <= 0) { O.time.textContent = '—'; O.timeSub.textContent = ''; return; }
+    if (!isFinite(gsMs) || gsMs <= 0) { O.time.textContent = '—'; O.timeSub.textContent = 'GS ≤ 0 — неможливо'; return; }
+    const gsKmh = fromMs(gsMs, 'kmh');
+    const hours = dist / gsKmh;
+    const minutes = hours * 60;
+    O.time.textContent = fmtDuration(minutes);
+    O.timeSub.textContent = '≈ ' + hours.toFixed(2) + ' год · ' + Math.round(minutes) + ' хв';
+  }
+
+  const unitBtns = Array.prototype.slice.call(document.querySelectorAll('#tasUnit button'));
+  function syncUnitButtons() {
+    unitBtns.forEach((b) => b.classList.toggle('on', b.dataset.u === state.unit));
+  }
+  unitBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const u = btn.dataset.u;
+      if (u === state.unit) return;
+      const v = num(F.tas);
+      if (isFinite(v)) {
+        const conv = (u === 'kmh') ? v * KMH_PER_MS : v / KMH_PER_MS;
+        F.tas.value = String(Math.round(conv * 10) / 10);
+      }
+      state.unit = u;
+      syncUnitButtons();
+      update();
+    });
+  });
+
+  el('reverse').addEventListener('change', (e) => {
+    state.reverse = e.target.checked;
+    update();
+  });
+
+  function stepVr(delta) {
+    let v = num(F.vr);
+    if (!isFinite(v)) v = 0;
+    v = Math.round((v + delta) * 10) / 10;
+    if (v > 180)  v = 180;
+    if (v < -180) v = -180;
+    F.vr.value = fmtVr(v);
+    update();
+  }
+  function attachStepper(btn, delta) {
+    let timeout = null, interval = null;
+    const stop = () => {
+      if (timeout)  { clearTimeout(timeout);  timeout = null; }
+      if (interval) { clearInterval(interval); interval = null; }
+      btn.classList.remove('pressed');
+    };
+    btn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      btn.classList.add('pressed');
+      stepVr(delta);
+      timeout = setTimeout(() => { interval = setInterval(() => stepVr(delta), 80); }, 400);
+    });
+    btn.addEventListener('pointerup',     stop);
+    btn.addEventListener('pointerleave',  stop);
+    btn.addEventListener('pointercancel', stop);
+    btn.addEventListener('lostpointercapture', stop);
+    btn.addEventListener('click', (e) => { if (e.detail === 0) stepVr(delta); });
+  }
+  attachStepper(el('varMinus'), -VR_STEP);
+  attachStepper(el('varPlus'),   VR_STEP);
+
+  el('reset').addEventListener('click', () => {
+    state.unit    = DEFAULTS.unit;
+    state.reverse = DEFAULTS.reverse;
+    el('reverse').checked = false;
+    syncUnitButtons();
+    F.tc.value   = DEFAULTS.tc;
+    F.tas.value  = DEFAULTS.tas;
+    F.wd.value   = DEFAULTS.wd;
+    F.ws.value   = DEFAULTS.ws;
+    F.vr.value   = DEFAULTS.vr;
+    F.dist.value = DEFAULTS.dist;
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    update();
+  });
+
+  loadState();
+  sanitizeAll();
+  syncUnitButtons();
+  el('reverse').checked = state.reverse;
+
+  attachClamp(F.tc,   0,    360, false);
+  attachClamp(F.wd,   0,    360, false);
+  attachClamp(F.vr,  -180,  180, true);
+  attachClamp(F.tas,  0,    999, false);
+  attachClamp(F.ws,   0,    999, false);
+  attachClamp(F.dist, 0,    DIST_MAX, false);
+
+  Object.values(F).forEach((inp) => {
+    inp.addEventListener('input',  update);
+    inp.addEventListener('change', update);
+  });
+
+  update();
+})();
+</script>
+
+<!-- PWA: реєстрація service worker для офлайну -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function (err) {
+      console.warn('SW не зареєстровано:', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
