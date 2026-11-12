@@ -1,4 +1,4 @@
-const CACHE = 'wind-tri-v1';
+const CACHE = 'wind-tri-v2';
 
 const ASSETS = [
   './',
