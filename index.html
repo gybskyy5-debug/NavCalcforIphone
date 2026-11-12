@@ -339,10 +339,17 @@
                   markerWidth="4" markerHeight="4" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#8b9bb4"/>
           </marker>
+          <!-- ЧЕРВОНЕ вістря стрілки хідінга (TH) -->
           <marker id="arrowTH" viewBox="0 0 10 10" refX="9.5" refY="5"
                   markerWidth="14" markerHeight="14"
                   markerUnits="userSpaceOnUse" orient="auto">
             <path d="M0,0 L10,5 L0,10 z" fill="#f87171"/>
+          </marker>
+          <!-- ФІОЛЕТОВЕ вістря стрілки магнітного хідінга (MH) -->
+          <marker id="arrowMH" viewBox="0 0 10 10" refX="9.5" refY="5"
+                  markerWidth="14" markerHeight="14"
+                  markerUnits="userSpaceOnUse" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#c084fc"/>
           </marker>
         </defs>
         <circle cx="110" cy="110" r="84" fill="none" stroke="#26334d" stroke-width="1.5"/>
@@ -361,12 +368,16 @@
         <line id="svg-th" x1="110" y1="110" x2="110" y2="34"
               stroke="#f87171" stroke-width="3" stroke-linecap="butt"
               stroke-dasharray="7 5" marker-end="url(#arrowTH)"/>
+        <line id="svg-mh" x1="110" y1="110" x2="110" y2="34"
+              stroke="#c084fc" stroke-width="3" stroke-linecap="butt"
+              stroke-dasharray="7 5" marker-end="url(#arrowMH)"
+              style="display:none"/>
         <circle cx="110" cy="110" r="4" fill="#e8eefc"/>
       </svg>
     </div>
     <div class="legend">
       <span style="color:#38bdf8"><i class="dash"></i><span style="color:var(--muted)">TC</span></span>
-      <span style="color:#f87171"><i class="dash"></i><span style="color:var(--muted)">TH</span></span>
+      <span id="legendMid" style="color:#f87171"><i class="dash"></i><span id="legendMidLabel" style="color:var(--muted)">TH</span></span>
       <span style="color:#8b9bb4"><i class="dash"></i><span style="color:var(--muted)">вітер</span></span>
     </div>
   </section>
@@ -388,9 +399,12 @@
     th:el('out-th'), thSub:el('out-th-sub'), gs:el('out-gs'), gsSub:el('out-gs-sub'),
     wca:el('out-wca'), wcaSub:el('out-wca-sub'), mh:el('out-mh'),
     long:el('out-long'), cross:el('out-cross'), time:el('out-time'), timeSub:el('out-time-sub'),
-    warn:el('warn'), tcEffective:el('tcEffective')
+    warn:el('warn'), tcEffective:el('tcEffective'),
+    legendMid:el('legendMid'), legendMidLabel:el('legendMidLabel')
   };
-  const SVG = { tc:el('svg-tc'), th:el('svg-th'), wind:el('svg-wind') };
+  const SVG = {
+    tc:el('svg-tc'), th:el('svg-th'), mh:el('svg-mh'), wind:el('svg-wind')
+  };
 
   const CX = 110, CY = 110, R = 84;
   const KMH_PER_MS = 3.6;
@@ -461,7 +475,7 @@
     O.wca.textContent = '—'; O.mh.textContent = '—'; O.wcaSub.textContent = '—';
     O.thSub.textContent = 'TH'; O.long.textContent = '—'; O.cross.textContent = '—';
     O.time.textContent = '—'; O.timeSub.textContent = '';
-    [SVG.tc, SVG.th, SVG.wind].forEach((n) => {
+    [SVG.tc, SVG.th, SVG.mh, SVG.wind].forEach((n) => {
       n.setAttribute('x2', CX); n.setAttribute('y2', CY);
     });
   }
@@ -543,6 +557,23 @@
     return h + ' г ' + m + ' хв';
   }
 
+  // ── вибір стрілки на компасі: TH (червона) або MH (фіолетова) ──
+  function setCompassHeadingArrow(hasVariation, th, mh) {
+    if (hasVariation) {
+      SVG.th.style.display = 'none';
+      SVG.mh.style.display = '';
+      setLine(SVG.mh, mh, R - 22);
+      O.legendMid.style.color = '#c084fc';
+      O.legendMidLabel.textContent = 'MH';
+    } else {
+      SVG.th.style.display = '';
+      SVG.mh.style.display = 'none';
+      setLine(SVG.th, th, R - 22);
+      O.legendMid.style.color = '#f87171';
+      O.legendMidLabel.textContent = 'TH';
+    }
+  }
+
   function calc() {
     const tcRaw  = num(F.tc);
     const tasRaw = num(F.tas);
@@ -606,8 +637,13 @@
     else O.cross.textContent = 'зліва '  + fL(fromMs(-crossComp, state.unit)) + uLbl;
 
     updateTime(gsMs);
+
+    // ── стрілки на компасі
     setLine(SVG.tc, tc, R - 8);
-    setLine(SVG.th, th, R - 22);
+
+    // Якщо схилення задане (не 0) — показуємо MH (фіолетову), інакше — TH (червону)
+    const hasVariation = Math.abs(vr) >= 0.05;
+    setCompassHeadingArrow(hasVariation, th, mh);
 
     const [wx, wy]   = polar(R - 4, wd);
     const [wx2, wy2] = polar(24, wd);
